@@ -1,8 +1,13 @@
 from pydantic import BaseModel
-
+from enum import Enum
 
 class TextToSpeechRequest(BaseModel):
-    text: str
+    input_text: str
+    output_file: str
     voice: str
-    model_name: str = "default"
-    output_format: str = "pcm"
+    
+class VoiceOptions(str, Enum):
+    """Voice options for Text-to-Speech."""
+    EVA = "Eva"
+    EMMA = "Emma"
+    JACK = "Jack"
