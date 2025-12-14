@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -8,12 +8,15 @@ import {
   CircularProgress,
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
-import { ragAPI } from '../../helpers/api';
+import VolumeUpIcon from '@mui/icons-material/VolumeUp';
+import { ragAPI, ttsAPI } from '../../helpers/api';
 
 const AskNotes = ({ selectedSession }) => {
   const [query, setQuery] = useState('');
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [playingAudio, setPlayingAudio] = useState(false);
+  const audioRef = useRef(null);
 
   const handleSend = async () => {
     if (!query.trim() || !selectedSession) return;
@@ -37,6 +40,37 @@ const AskNotes = ({ selectedSession }) => {
         setMessages(prev => prev.map(msg => 
           msg.id === botMessageId ? { ...msg, text: fullResponse } : msg
         ));
+      }
+      
+      // Generate and play audio for the complete response
+      if (fullResponse.trim()) {
+        try {
+          setPlayingAudio(true);
+          const audioBlob = await ttsAPI.generateAudio(fullResponse);
+          const audioUrl = URL.createObjectURL(audioBlob);
+          
+          if (audioRef.current) {
+            audioRef.current.pause();
+          }
+          
+          const audio = new Audio(audioUrl);
+          audioRef.current = audio;
+          
+          audio.onended = () => {
+            setPlayingAudio(false);
+            URL.revokeObjectURL(audioUrl);
+          };
+          
+          audio.onerror = () => {
+            setPlayingAudio(false);
+            URL.revokeObjectURL(audioUrl);
+          };
+          
+          await audio.play();
+        } catch (audioError) {
+          console.error('Error playing audio:', audioError);
+          setPlayingAudio(false);
+        }
       }
     } catch (error) {
       console.error('Error querying RAG:', error);
@@ -119,14 +153,59 @@ const AskNotes = ({ selectedSession }) => {
                     whiteSpace: 'pre-wrap',
                   }}
                 >
-                  {message.text ? (
-                    <Typography>{message.text}</Typography>
-                  ) : (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <CircularProgress size={16} />
-                      <Typography variant="caption">Thinking...</Typography>
-                    </Box>
-                  )}
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                    {message.text ? (
+                      <Typography sx={{ flex: 1 }}>{message.text}</Typography>
+                    ) : (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
+                        <CircularProgress size={16} />
+                        <Typography variant="caption">Thinking...</Typography>
+                      </Box>
+                    )}
+                    {message.type === 'bot' && message.text && (
+                      <IconButton
+                        size="small"
+                        onClick={async () => {
+                          try {
+                            setPlayingAudio(true);
+                            const audioBlob = await ttsAPI.generateAudio(message.text);
+                            const audioUrl = URL.createObjectURL(audioBlob);
+                            
+                            if (audioRef.current) {
+                              audioRef.current.pause();
+                            }
+                            
+                            const audio = new Audio(audioUrl);
+                            audioRef.current = audio;
+                            
+                            audio.onended = () => {
+                              setPlayingAudio(false);
+                              URL.revokeObjectURL(audioUrl);
+                            };
+                            
+                            audio.onerror = () => {
+                              setPlayingAudio(false);
+                              URL.revokeObjectURL(audioUrl);
+                            };
+                            
+                            await audio.play();
+                          } catch (error) {
+                            console.error('Error playing audio:', error);
+                            setPlayingAudio(false);
+                          }
+                        }}
+                        disabled={playingAudio}
+                        sx={{ 
+                          color: playingAudio ? '#1976d2' : '#666',
+                          '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' },
+                          mt: -0.5,
+                        }}
+                        title="Play audio"
+                      >
+                        <VolumeUpIcon fontSize="small" />
+                      </IconButton>
+                    )}
+                  </Box>
                 </Paper>
               </Box>
             ))}

@@ -14,7 +14,7 @@ class GeminiService:
         context_text = "\n\n".join(context_docs)
         
         prompt = f"""
-        You are a helpful AI assistant. Use the following context from previous conversations to answer the user's question.
+        You are a helpful AI assistant named Clara. Use the following context from previous conversations to answer the user's question.
         
         Context:
         {context_text}
