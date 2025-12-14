@@ -1,70 +1,109 @@
-import Typography from "@mui/material/Typography";
-import Box from "@mui/material/Box";
-import Paper from "@mui/material/Paper";
-import Button from "@mui/material/Button";
 import { useState } from "react";
+import Box from "@mui/material/Box";
+import Header from "../layout/Header";
+import SessionSidebar from "../sessions/SessionSidebar";
+import ContentArea from "../content/ContentArea";
+import AskNotes from "../chat/AskNotes";
+import CreateSessionDialog from "../sessions/CreateSessionDialog";
 
 const Home = () => {
-    const [response, setResponse] = useState(null);
-    const [loading, setLoading] = useState(false);
+    const [selectedSession, setSelectedSession] = useState(null);
+    const [selectedConversation, setSelectedConversation] = useState(null);
+    const [createDialogOpen, setCreateDialogOpen] = useState(false);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-    const goodBoy = async () => {
-        setLoading(true);
-        try {
-            const res = await fetch('/api/example/good_boy');
-            if (!res.ok) throw new Error(`Erreur ${res.status}`);
-            const data = await res.text();
-            setResponse(data);
-        } catch (err) {
-            setResponse({ error: err.message });
-        } finally {
-            setLoading(false);
-        }
+    const handleSessionSelect = (session) => {
+        setSelectedSession(session);
+        setSelectedConversation(null); // Reset conversation when session changes
     };
+
+    const handleConversationSelect = (conversation) => {
+        setSelectedConversation(conversation);
+    };
+
+    const handleAddClick = () => {
+        setCreateDialogOpen(true);
+    };
+
+    const handleDialogClose = () => {
+        setCreateDialogOpen(false);
+    };
+
+    const handleSessionCreated = (session) => {
+        handleSessionSelect(session);
+        setRefreshTrigger(prev => prev + 1); // Trigger refresh
+        handleDialogClose();
+    };
+
     return (
         <Box
             sx={{
                 width: '100%',
-                minHeight: '100vh',
+                height: '100vh',
                 display: 'flex',
                 flexDirection: 'column',
-                alignItems: 'center',
-                pt: 4,
-                backgroundColor: '#1a1a1a',
-                position: 'relative',
+                backgroundColor: '#f5f5f5',
             }}
         >
-            <Paper sx={{ p: 2, backgroundColor: '#2d2d2d' }}>
-                <Typography variant="h4" sx={{ color: '#ffffff' }}>Web-App template</Typography>
-            </Paper>
-            <Button 
-                variant="contained" 
-                size="large"
-                onClick={goodBoy}
-                disabled={loading}
+            <Header onAddClick={handleAddClick} />
+            
+            <Box
                 sx={{
-                    position: 'absolute',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
+                    flex: 1,
+                    display: 'flex',
+                    overflow: 'hidden',
                 }}
             >
-                {loading ? 'Loading...' : 'Click Me'}
-            </Button>
-            {response && (
-                <Typography 
-                    sx={{ 
-                        color: '#ffffff',
-                        position: 'absolute',
-                        top: 'calc(50% + 60px)',
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        textAlign: 'center',
+                {/* Left Sidebar - Sessions */}
+                <Box
+                    sx={{
+                        width: 300,
+                        height: '100%',
+                        overflow: 'hidden',
                     }}
                 >
-                    {typeof response === 'object' ? response.error : response}
-                </Typography>
-            )}
+                    <SessionSidebar
+                        onSessionSelect={handleSessionSelect}
+                        onConversationSelect={handleConversationSelect}
+                        selectedSession={selectedSession}
+                        selectedConversation={selectedConversation}
+                        onAddSession={handleAddClick}
+                        refreshTrigger={refreshTrigger}
+                        onRefresh={() => setRefreshTrigger(prev => prev + 1)}
+                    />
+                </Box>
+
+                {/* Center Content Area */}
+                <Box
+                    sx={{
+                        flex: 1,
+                        height: '100%',
+                        overflow: 'hidden',
+                    }}
+                >
+                    <ContentArea
+                        selectedConversation={selectedConversation}
+                        selectedSession={selectedSession}
+                    />
+                </Box>
+
+                {/* Right Sidebar - Ask Notes */}
+                <Box
+                    sx={{
+                        width: 400,
+                        height: '100%',
+                        overflow: 'hidden',
+                    }}
+                >
+                    <AskNotes selectedSession={selectedSession} />
+                </Box>
+            </Box>
+
+            <CreateSessionDialog
+                open={createDialogOpen}
+                onClose={handleDialogClose}
+                onSessionCreated={handleSessionCreated}
+            />
         </Box>
     );
 };
