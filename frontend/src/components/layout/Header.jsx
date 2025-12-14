@@ -24,7 +24,7 @@ const Header = ({ onAddClick }) => {
           mr: 3,
         }}
       >
-        Clara
+        ClAire
       </Typography>
       
       <Box
