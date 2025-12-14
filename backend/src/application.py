@@ -35,8 +35,12 @@ app = MyFastAPI(root="/api", lifespan=lifespan)
 rag_service = RagService()
 # Configure services
 example_service = ExampleService()
+<<<<<<< HEAD
 text_to_speech_service = TextToSpeechService()
 session_service = SessionService()
+=======
+session_service = SessionService(rag_service=rag_service)
+>>>>>>> e341047a883a3091209066a0a402b62f91ca771f
 stt_service = SttService()
 
 # Configure controllers

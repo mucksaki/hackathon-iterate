@@ -4,6 +4,7 @@ from chromadb.utils import embedding_functions
 from sqlalchemy.future import select
 from rank_bm25 import BM25Okapi
 import numpy as np
+from typing import Optional
 
 from ...commons.database import AsyncSessionLocal
 from ...commons.constants import settings
@@ -28,13 +29,57 @@ class RagService:
 
     # --- Persistence Methods ---
 
-    async def create_session(self, data: schemas.SessionCreate) -> models.Session:
+    async def create_session(self, data: schemas.SessionCreate, session_id: Optional[str] = None) -> models.Session:
+        # Use session_id from data if provided, otherwise use the parameter (for backward compatibility)
+        final_session_id = data.session_id if data.session_id else session_id
+        if not final_session_id:
+            import uuid
+            final_session_id = str(uuid.uuid4())
+        
         async with AsyncSessionLocal() as db:
-            session = models.Session(name=data.session_name, description=data.session_description)
+            session = models.Session(
+                id=final_session_id,  # Use UUID as primary key
+                name=data.session_name, 
+                description=data.session_description
+            )
             db.add(session)
             await db.commit()
             await db.refresh(session)
             return session
+
+    async def get_all_sessions(self) -> list[models.Session]:
+        """Get all sessions from RAG database."""
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(select(models.Session))
+            sessions = result.scalars().all()
+            return list(sessions)
+
+    async def delete_all_sessions(self) -> int:
+        """Delete all sessions from RAG database (hard delete)."""
+        async with AsyncSessionLocal() as db:
+            # Get all sessions first to count
+            result = await db.execute(select(models.Session))
+            sessions = result.scalars().all()
+            count = len(sessions)
+            
+            # Delete all sessions (cascades to conversations)
+            for session in sessions:
+                await db.delete(session)
+            
+            await db.commit()
+            
+            # Also clear the vector database collection
+            try:
+                # Delete all documents from ChromaDB collection
+                # Note: ChromaDB doesn't have a direct "delete all" method
+                # We need to get all IDs and delete them
+                all_docs = self.collection.get()
+                if all_docs and all_docs.get('ids'):
+                    self.collection.delete(ids=all_docs['ids'])
+            except Exception as e:
+                print(f"Warning: Failed to clear vector database: {e}")
+            
+            return count
 
     async def save_conversation(self, data: schemas.ConversationCreate) -> models.Conversation:
         async with AsyncSessionLocal() as db:
@@ -48,18 +93,18 @@ class RagService:
             self.collection.add(
                 ids=[str(conv.id)],
                 documents=[conv.text],
-                metadatas=[{"session_id": conv.session_id}]
+                metadatas=[{"session_id": str(conv.session_id)}]  # UUID as string
             )
             return conv
 
     # --- Retrieval & RAG Methods ---
 
-    def _hybrid_search(self, query: str, session_id: int) -> list[str]:
+    def _hybrid_search(self, query: str, session_id: str) -> list[str]:
         # 1. Vector Search
         results = self.collection.query(
             query_texts=[query],
             n_results=settings.RAG_TOP_K * 2, # Fetch extra for re-ranking
-            where={"session_id": session_id}
+            where={"session_id": str(session_id)}  # UUID as string
         )
         
         if not results['documents'] or not results['documents'][0]:
@@ -88,7 +133,7 @@ class RagService:
         sorted_indices = np.argsort(final_scores)[::-1][:settings.RAG_TOP_K]
         return [docs[i] for i in sorted_indices]
 
-    async def stream_rag_response(self, query: str, session_id: int):
+    async def stream_rag_response(self, query: str, session_id: str):
         # 1. Get Context
         context_docs = self._hybrid_search(query, session_id)
         context_text = "\n\n".join(context_docs)
