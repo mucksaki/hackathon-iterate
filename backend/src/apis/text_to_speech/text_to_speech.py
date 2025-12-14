@@ -7,8 +7,6 @@ from dotenv import load_dotenv
 load_dotenv()
 api_key = os.getenv("GRADIUM_API_KEY")
 
-print(f"Loaded API Key: {api_key}")
-
 client = gradium.client.GradiumClient(api_key=api_key)
 
 SAMPLE_RATE = 48000
