@@ -72,3 +72,19 @@ def controller(router, session_service: SessionService) -> None:
         if not conversation:
             raise HTTPException(status_code=404, detail="Conversation not found")
         return conversation
+    
+    @router.get("/sessions/{session_id}/conversations/{conversation_id}/content")
+    def get_conversation_content(session_id: str, conversation_id: str):
+        """Get the content of a conversation file."""
+        content = session_service.get_conversation_content(session_id, conversation_id)
+        if content is None:
+            raise HTTPException(status_code=404, detail="Conversation content not found")
+        return content
+    
+    @router.delete("/sessions/{session_id}/conversations/{conversation_id}", status_code=204)
+    def delete_conversation(session_id: str, conversation_id: str):
+        """Delete a conversation from a session (hard delete)."""
+        success = session_service.delete_conversation(session_id, conversation_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+        return None

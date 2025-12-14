@@ -201,9 +201,7 @@ class SessionService:
                 conversation = Conversation(
                     conversation_id=conversation_id,
                     file_path=conversation_file_rel,
-                    added_at=timestamp,
-                    chunk_count=0,
-                    status="pending"
+                    added_at=timestamp
                 )
                 
                 # Update session
@@ -226,3 +224,59 @@ class SessionService:
                 if conversation.conversation_id == conversation_id:
                     return conversation
         return None
+    
+    def get_conversation_content(self, session_id: str, conversation_id: str) -> Optional[str]:
+        """Get the content of a conversation file."""
+        conversation = self.get_conversation(session_id, conversation_id)
+        if not conversation:
+            return None
+        
+        # Resolve the file path
+        conversation_file = self.base_path / conversation.file_path
+        if conversation_file.exists():
+            try:
+                with open(conversation_file, 'r', encoding='utf-8') as f:
+                    return f.read()
+            except Exception as e:
+                print(f"Error reading conversation file: {e}")
+                return None
+        return None
+    
+    def delete_conversation(self, session_id: str, conversation_id: str) -> bool:
+        """Delete a conversation from a session (hard delete)."""
+        sessions_data = self._load_sessions_data()
+        
+        for i, session in enumerate(sessions_data.sessions):
+            if session.session_id == session_id:
+                conversation_found = False
+                updated_conversations = []
+                
+                for conversation in session.conversations:
+                    if conversation.conversation_id == conversation_id:
+                        conversation_found = True
+                        # Delete the conversation file
+                        conversation_file = (self.base_path / conversation.file_path).resolve()
+                        if conversation_file.exists():
+                            try:
+                                conversation_file.unlink()
+                            except Exception as e:
+                                print(f"Error deleting conversation file {conversation_file}: {e}")
+                    else:
+                        updated_conversations.append(conversation)
+                
+                if conversation_found:
+                    session.conversations = updated_conversations
+                    session.updated_at = self._get_current_timestamp()
+                    # Update last_conversation_added if needed
+                    if not session.conversations:
+                        session.last_conversation_added = None
+                    else:
+                        # Set to the most recent conversation
+                        latest = max(session.conversations, key=lambda c: c.added_at)
+                        session.last_conversation_added = latest.added_at
+                    
+                    sessions_data.sessions[i] = session
+                    self._save_sessions_data(sessions_data)
+                    return True
+        
+        return False

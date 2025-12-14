@@ -7,8 +7,6 @@ class Conversation(BaseModel):
     conversation_id: str
     file_path: str
     added_at: str
-    chunk_count: Optional[int] = 0
-    status: Optional[str] = "pending"  # pending, chunked, error
 
 
 class Session(BaseModel):
