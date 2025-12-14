@@ -1,5 +1,8 @@
 fastapi
 uvicorn
+gradium
+pydantic
+dotenv
 requests
 dotenv
 pydantic
