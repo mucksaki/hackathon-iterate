@@ -29,7 +29,7 @@ async def lifespan(app: MyFastAPI):
     yield
     print("Shutting down...")
 
-app = MyFastAPI(root="/api")
+app = MyFastAPI(root="/api", lifespan=lifespan)
 rag_service = RagService()
 # Configure services
 example_service = ExampleService()
