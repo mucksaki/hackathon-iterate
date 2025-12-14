@@ -67,3 +67,38 @@ export const sessionAPI = {
   },
 };
 
+export const ragAPI = {
+  // Query RAG with streaming response
+  initialQuery: async function* (query, sessionId) {
+    const response = await fetch(`${API_BASE}/rag/initial_query`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        query: query,
+        session_id: sessionId,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to query RAG: ${response.status}`);
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        yield chunk;
+      }
+    } finally {
+      reader.releaseLock();
+    }
+  },
+};
+

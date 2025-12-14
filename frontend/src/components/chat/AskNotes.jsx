@@ -5,26 +5,47 @@ import {
   TextField,
   IconButton,
   Paper,
+  CircularProgress,
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
+import { ragAPI } from '../../helpers/api';
 
 const AskNotes = ({ selectedSession }) => {
   const [query, setQuery] = useState('');
   const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   const handleSend = async () => {
     if (!query.trim() || !selectedSession) return;
 
     const userMessage = { type: 'user', text: query };
     setMessages(prev => [...prev, userMessage]);
+    const currentQuery = query;
     setQuery('');
+    setLoading(true);
 
-    // TODO: Implement RAG request to backend
-    // For now, just add a placeholder response
-    setTimeout(() => {
-      const botMessage = { type: 'bot', text: 'This is a placeholder response. RAG functionality will be implemented here.' };
-      setMessages(prev => [...prev, botMessage]);
-    }, 500);
+    // Add empty bot message that will be updated with streaming response
+    const botMessageId = Date.now();
+    setMessages(prev => [...prev, { id: botMessageId, type: 'bot', text: '' }]);
+
+    try {
+      // Stream the response from RAG
+      let fullResponse = '';
+      for await (const chunk of ragAPI.initialQuery(currentQuery, selectedSession.session_id)) {
+        fullResponse += chunk;
+        // Update the bot message with accumulated response
+        setMessages(prev => prev.map(msg => 
+          msg.id === botMessageId ? { ...msg, text: fullResponse } : msg
+        ));
+      }
+    } catch (error) {
+      console.error('Error querying RAG:', error);
+      setMessages(prev => prev.map(msg => 
+        msg.id === botMessageId ? { ...msg, text: `Error: ${error.message}` } : msg
+      ));
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleKeyPress = (e) => {
@@ -82,7 +103,7 @@ const AskNotes = ({ selectedSession }) => {
           <Box>
             {messages.map((message, index) => (
               <Box
-                key={index}
+                key={message.id || index}
                 sx={{
                   mb: 2,
                   display: 'flex',
@@ -95,9 +116,17 @@ const AskNotes = ({ selectedSession }) => {
                     maxWidth: '80%',
                     backgroundColor: message.type === 'user' ? '#1976d2' : '#f5f5f5',
                     color: message.type === 'user' ? '#ffffff' : '#333',
+                    whiteSpace: 'pre-wrap',
                   }}
                 >
-                  <Typography>{message.text}</Typography>
+                  {message.text ? (
+                    <Typography>{message.text}</Typography>
+                  ) : (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <CircularProgress size={16} />
+                      <Typography variant="caption">Thinking...</Typography>
+                    </Box>
+                  )}
                 </Paper>
               </Box>
             ))}
@@ -122,7 +151,7 @@ const AskNotes = ({ selectedSession }) => {
           />
           <IconButton
             onClick={handleSend}
-            disabled={!query.trim()}
+            disabled={!query.trim() || loading}
             sx={{
               backgroundColor: '#1976d2',
               color: '#ffffff',

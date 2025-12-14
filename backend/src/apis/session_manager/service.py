@@ -226,6 +226,25 @@ class SessionService:
                     added_at=timestamp
                 )
                 
+                # Save conversation to RAG service if available
+                if self.rag_service:
+                    try:
+                        import asyncio
+                        from ..rag import schemas as rag_schemas
+                        # Create RAG conversation with the same session_id (UUID)
+                        rag_conv_data = rag_schemas.ConversationCreate(
+                            conv_text=conversation_text,
+                            session_id=session_id  # Use the same UUID
+                        )
+                        # Run async function
+                        asyncio.run(self.rag_service.save_conversation(rag_conv_data))
+                        print(f"Successfully saved conversation to RAG for session: {session_id}")
+                    except Exception as e:
+                        print(f"Warning: Failed to save conversation to RAG: {e}")
+                        import traceback
+                        traceback.print_exc()
+                        # Don't fail the conversation creation, just log the error
+                
                 # Update session
                 session.conversations.append(conversation)
                 session.last_conversation_added = timestamp
