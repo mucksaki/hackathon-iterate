@@ -13,3 +13,6 @@ chromadb
 google-generativeai
 rank_bm25
 numpy
+scipy
+sounddevice
+
