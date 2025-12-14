@@ -3,6 +3,7 @@ import os
 import time
 from dotenv import load_dotenv
 import json
+import ast
 
 load_dotenv()
 api_key = os.environ['PYANNOTE_API_KEY']
@@ -27,7 +28,8 @@ def upload_wav_to_pyannote(file_path: str, object_key: str) -> str:
 
     # Upload local file to the pre-signed URL.
     # input_path = '/home/yosh/audio_ml/sample_fr_hibiki_crepes.mp3'
-    print("Uploading {0} to {1}".format(file_path, presigned_url))
+    # print("Uploading {0} to {1}".format(file_path, presigned_url))
+
     with open(file_path, "rb") as input_file:
         # Upload your local audio file.
         requests.put(presigned_url, data=input_file)
@@ -72,11 +74,11 @@ def get_text(object_key: str) -> str:
             break
 
         print(f"Job status: {status}, waiting...")
-        time.sleep(10)  # Wait 10 seconds before polling again
+        time.sleep(5)  # Wait 10 seconds before polling again
     
-    print('-'*30)
-    print(f'data {data.keys()}')
-    print('finished while')
+    # print('-'*30)
+    # print(f'data {data.keys()}')
+    # print('finished while')
     json_data = parse_conv(data)
     return json_data
 
@@ -86,10 +88,15 @@ def parse_conv(data: dict):
     for turn in turns:
         text = turn['text']
         speaker = turn['speaker']
-        conv.append({
-            speaker:text
-        })
-    json_data = json.dumps(data)
+        # If the last entry has the same speaker, merge the text
+        if conv and speaker in conv[-1]:
+            conv[-1][speaker] += " " + text
+        else:
+            # Otherwise, add a new entry
+            conv.append({speaker: text})
+        # break
+
+    json_data = json.dumps(conv, indent=2, ensure_ascii=False)
     return json_data
 
 
@@ -99,6 +106,7 @@ if __name__ == '__main__':
     object_key = 'first-meeting'
     print('upload start ...')
     object_key = upload_wav_to_pyannote(file_path=file_path, object_key=object_key)
-    print('output ...')
+    print('upload finished')
+    print('output start...')
     output = get_text(object_key=object_key)
     print(f'output: \n {output}')
