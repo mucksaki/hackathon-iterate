@@ -3,3 +3,10 @@ uvicorn
 requests
 dotenv
 pydantic
+sqlalchemy
+aiosqlite
+pydantic-settings
+chromadb
+google-generativeai
+rank_bm25
+numpy
