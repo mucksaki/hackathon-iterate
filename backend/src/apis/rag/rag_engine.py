@@ -49,7 +49,7 @@ class HybridRetriever:
         tokenized_query = query.split()
         return np.array(bm25.get_scores(tokenized_query))
 
-    def hybrid_search(self, query: str, session_id: int, top_k: int = settings.RAG_TOP_K) -> List[str]:
+    def hybrid_search(self, query: str, session_id: str, top_k: int = settings.RAG_TOP_K) -> List[str]:
         """
         Performs hybrid retrieval:
         1. Fetch candidates from Vector DB (filtered by session_id).
@@ -62,7 +62,7 @@ class HybridRetriever:
         results = self.collection.query(
             query_texts=[query],
             n_results=top_k * 2, 
-            where={"session_id": session_id}
+            where={"session_id": str(session_id)}  # UUID as string
         )
         
         if not results['documents'] or not results['documents'][0]:

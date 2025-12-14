@@ -33,7 +33,7 @@ app = MyFastAPI(root="/api", lifespan=lifespan)
 rag_service = RagService()
 # Configure services
 example_service = ExampleService()
-session_service = SessionService()
+session_service = SessionService(rag_service=rag_service)
 stt_service = SttService()
 
 # Configure controllers

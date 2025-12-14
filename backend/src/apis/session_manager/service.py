@@ -10,7 +10,7 @@ from .models import Session, SessionCreate, SessionUpdate, Conversation, Session
 
 
 class SessionService:
-    def __init__(self, base_path: str = None):
+    def __init__(self, base_path: str = None, rag_service=None):
         # Get the directory where this file is located
         if base_path is None:
             self.base_path = Path(__file__).parent
@@ -19,6 +19,7 @@ class SessionService:
         
         self.sessions_dir = self.base_path / "sessions"
         self.sessions_json_path = self.base_path / "sessions.json"
+        self.rag_service = rag_service
         
         # Create sessions directory if it doesn't exist
         self.sessions_dir.mkdir(exist_ok=True)
@@ -76,6 +77,27 @@ class SessionService:
         # Create conversations subdirectory (using absolute path for file operations)
         conversations_dir_abs = session_dir / "conversations"
         conversations_dir_abs.mkdir(exist_ok=True)
+        
+        # Create session in RAG service if available (using same UUID)
+        if self.rag_service:
+            try:
+                import asyncio
+                from ..rag import schemas as rag_schemas
+                # Create RAG session with the same UUID
+                rag_session_data = rag_schemas.SessionCreate(
+                    session_name=session_data.name,
+                    session_description=session_data.description,
+                    session_id=session_id  # Pass the same UUID
+                )
+                # Run async function - use asyncio.run() which creates a new event loop
+                # This is safe to use in sync code
+                asyncio.run(self.rag_service.create_session(rag_session_data))
+                print(f"Successfully created RAG session with ID: {session_id}")
+            except Exception as e:
+                print(f"Error: Failed to create RAG session: {e}")
+                import traceback
+                traceback.print_exc()
+                # Don't fail the session creation, just log the error
         
         session = Session(
             session_id=session_id,
