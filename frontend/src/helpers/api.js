@@ -102,3 +102,14 @@ export const ragAPI = {
   },
 };
 
+export const ttsAPI = {
+  // Generate audio from text
+  generateAudio: async (text, voice = 'Eva') => {
+    const response = await fetch(`${API_BASE}/text_to_speech/generate?text=${encodeURIComponent(text)}&voice=${voice}`, {
+      method: 'POST',
+    });
+    if (!response.ok) throw new Error(`Failed to generate audio: ${response.status}`);
+    return response.blob();
+  },
+};
+
