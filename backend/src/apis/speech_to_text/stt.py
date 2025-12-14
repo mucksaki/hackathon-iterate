@@ -9,9 +9,6 @@ load_dotenv()
 api_key = os.environ['PYANNOTE_API_KEY']
 
 def upload_wav_to_pyannote(file_path: str, object_key: str) -> str: 
-    # Define your media object key
-    # object_key = "my-meeting-recording"  # Replace with your desired object-key
-
     # Create the pre-signed PUT URL.
     # api_key = "YOUR_API_KEY"  # In production, use environment variables: os.getenv("PYANNOTE_API_KEY")
     response = requests.post(
