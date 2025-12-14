@@ -8,9 +8,8 @@ import ast
 load_dotenv()
 api_key = os.environ['PYANNOTE_API_KEY']
 
-def upload_wav_to_pyannote(file_path: str, object_key: str) -> str: 
+def upload_wav_to_pyannote(file_path: str, object_key: str) -> None: 
     # Create the pre-signed PUT URL.
-    # api_key = "YOUR_API_KEY"  # In production, use environment variables: os.getenv("PYANNOTE_API_KEY")
     response = requests.post(
         "https://api.pyannote.ai/v1/media/input",
         json={"url": f"media://{object_key}"},
@@ -23,15 +22,13 @@ def upload_wav_to_pyannote(file_path: str, object_key: str) -> str:
     data = response.json()
     presigned_url = data["url"]
 
-    # Upload local file to the pre-signed URL.
-    # input_path = '/home/yosh/audio_ml/sample_fr_hibiki_crepes.mp3'
-    # print("Uploading {0} to {1}".format(file_path, presigned_url))
+    print("Uploading ...")
 
     with open(file_path, "rb") as input_file:
         # Upload your local audio file.
         requests.put(presigned_url, data=input_file)
     
-    return object_key
+    return None
 
 def get_text(object_key: str) -> str:
     body = {
@@ -65,17 +62,13 @@ def get_text(object_key: str) -> str:
         if status in ["succeeded", "failed", "canceled"]:
             if status == "succeeded":
                 print("Job completed successfully!")
-                # print(data["output"])
             else:
                 print(f"Job {status}")
             break
 
         print(f"Job status: {status}, waiting...")
-        time.sleep(5)  # Wait 10 seconds before polling again
+        time.sleep(5)  # Wait 5 seconds before polling again
     
-    # print('-'*30)
-    # print(f'data {data.keys()}')
-    # print('finished while')
     json_data = parse_conv(data)
     return json_data
 
@@ -102,7 +95,7 @@ if __name__ == '__main__':
     file_path = 'backend/src/audios/sample_13-11-14-45.wav'
     object_key = 'first-meeting'
     print('upload start ...')
-    object_key = upload_wav_to_pyannote(file_path=file_path, object_key=object_key)
+    upload_wav_to_pyannote(file_path=file_path, object_key=object_key)
     print('upload finished')
     print('output start...')
     output = get_text(object_key=object_key)
