@@ -5,5 +5,9 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "asyncio>=4.0.0",
+    "fastapi>=0.124.4",
     "gradium>=0.5.4",
+    "pyaudio>=0.2.14",
+    "python-dotenv>=1.2.1",
 ]
